@@ -1,0 +1,5 @@
+name: Card2k
+author: Khanguyen.122
+version: 1.0
+main: org.Card2K.placeholder.CardPlaceholder
+identifier: card2k
