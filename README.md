@@ -1,4 +1,3 @@
-readme_content = """
 💳 Card2K Plugin – Hệ thống nạp thẻ cho Minecraft (1.16–1.21.6)
 
 Plugin hỗ trợ nạp thẻ cào qua API Card2K, tích hợp PlaceholderAPI, hỗ trợ giao diện nhập bằng AnvilGUI, chạy tốt trên Paper/Spigot từ 1.16 đến 1.21.6.
