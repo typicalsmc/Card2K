@@ -63,7 +63,41 @@ public class CardPlaceholder extends PlaceholderExpansion {
                 return String.valueOf(cache.getTotalYear(playerName));
         }
 
-        // Top list: top_month_5, top_year_10, top_total_3
+        if (param.startsWith("top_") && param.endsWith("_amount")) {
+            String[] split = param.split("_");
+            if (split.length == 4 && split[3].equals("amount")) {
+                String type = split[1]; // month, year, total
+                int rank;
+                try {
+                    rank = Integer.parseInt(split[2]);
+                } catch (NumberFormatException e) {
+                    return "N/A";
+                }
+                if (rank < 1 || rank > 10) return "N/A";
+
+                List<Map.Entry<String, Integer>> topList;
+                switch (type) {
+                    case "month":
+                        topList = cache.getTopMonth(10);
+                        break;
+                    case "year":
+                        topList = cache.getTopYear(10);
+                        break;
+                    case "total":
+                        topList = cache.getTopTotal(10);
+                        break;
+                    default:
+                        return "N/A";
+                }
+
+                if (rank <= topList.size()) {
+                    return String.valueOf(topList.get(rank - 1).getValue());
+                } else {
+                    return "N/A";
+                }
+            }
+        }
+
         if (param.startsWith("top_")) {
             String[] split = param.split("_");
             if (split.length == 3) {

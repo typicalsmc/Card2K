@@ -6,7 +6,7 @@
 
     <groupId>org.Card2K</groupId>
     <artifactId>Card2K</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0-release</version>
     <name>Card2K Plugin</name>
     <description>Plugin nạp thẻ Card2K hỗ trợ 1.16–1.21.6, PlaceholderAPI, AnvilGUI</description>
 

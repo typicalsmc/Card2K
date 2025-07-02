@@ -5,9 +5,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -23,123 +21,111 @@ public class LoggerUtil {
         LocalDateTime now = LocalDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneId.systemDefault());
         String timeStr = FORMAT.format(now);
         String monthStr = MONTH_FORMAT.format(now);
-        int year = now.getYear();
 
+        // 1. Ghi log chi tiết theo tháng
         try {
             File monthLog = new File(plugin.getDataFolder(), "log_success_" + monthStr + ".txt");
             monthLog.getParentFile().mkdirs();
-
-            try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(monthLog, true), StandardCharsets.UTF_8))) {
-                String detail = String.format("[%s] %s|%s|%d|%s|%s", timeStr, player, telco, amount, serial, code);
+            try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
+                    new FileOutputStream(monthLog, true), StandardCharsets.UTF_8))) {
+                String detail = String.format("[%s] %s|%s|%d|%s|%s",
+                        timeStr, player, telco, amount, serial, code);
                 writer.write(detail);
                 writer.newLine();
             }
-
         } catch (IOException e) {
             plugin.getLogger().severe("❌ Không thể ghi file log_success_" + monthStr + ".txt: " + e.getMessage());
         }
 
-        // 2. Ghi log tổng vào log_total.txt (để phục vụ top/mốc)
+        // 2. Cập nhật log_total.txt
+        updateTotalLog(plugin, player, amount, monthStr);
+
+        // 3. Reload cache và log thông báo
+        plugin.getCardDataCache().reload();
+        plugin.getLogger().info("[LOG] ✅ Ghi log nạp: " + player + " - " + amount + "đ");
+    }
+
+    private static void updateTotalLog(NapThePlugin plugin, String player, int amount, String monthStr) {
         File totalFile = new File(plugin.getDataFolder(), "log_total.txt");
-        Map<String, Long> totalMap = new HashMap<>();
+        int year = Year.now().getValue();
+
+        Map<String, Long> totalMap = new LinkedHashMap<>();
         Map<String, Map<Integer, Long>> yearlyMap = new HashMap<>();
         Map<String, Map<String, Long>> monthlyMap = new HashMap<>();
 
+        // Đọc file cũ
         if (totalFile.exists()) {
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(totalFile), StandardCharsets.UTF_8))) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+                    new FileInputStream(totalFile), StandardCharsets.UTF_8))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    String[] parts = line.split("\\|");
-                    if (parts.length >= 3) {
-                        String p = parts[0];
-                        long total = Long.parseLong(parts[1]);
-                        totalMap.put(p, total);
+                    String[] parts = line.split("\\|", 3);
+                    if (parts.length < 3) continue;
+                    String p = parts[0];
+                    long tot = Long.parseLong(parts[1]);
+                    totalMap.put(p, tot);
 
-                        Map<Integer, Long> yearData = new HashMap<>();
-                        Map<String, Long> monthData = new HashMap<>();
-                        String[] dataParts = parts[2].split(";");
-
-                        for (String d : dataParts) {
-                            if (d.contains(":")) {
-                                String[] kv = d.split(":");
-                                if (kv.length == 2) {
-                                    String key = kv[0];
-                                    long value = Long.parseLong(kv[1]);
-
-                                    if (key.contains("-")) {
-                                        monthData.put(key, value);
-                                    } else {
-                                        yearData.put(Integer.parseInt(key), value);
-                                    }
-                                }
-                            }
+                    Map<Integer, Long> yMap = new HashMap<>();
+                    Map<String, Long> mMap = new HashMap<>();
+                    for (String stat : parts[2].split(";")) {
+                        String[] kv = stat.split(":");
+                        if (kv.length == 2) {
+                            if (kv[0].contains("-")) mMap.put(kv[0], Long.parseLong(kv[1]));
+                            else yMap.put(Integer.parseInt(kv[0]), Long.parseLong(kv[1]));
                         }
-
-                        yearlyMap.put(p, yearData);
-                        monthlyMap.put(p, monthData);
                     }
+                    yearlyMap.put(p, yMap);
+                    monthlyMap.put(p, mMap);
                 }
-            } catch (Exception e) {
+            } catch (IOException e) {
                 plugin.getLogger().warning("⚠ Không thể đọc log_total.txt: " + e.getMessage());
             }
         }
 
-        // Cập nhật
+        // Cập nhật cho player hiện tại
         totalMap.put(player, totalMap.getOrDefault(player, 0L) + amount);
-        Map<Integer, Long> playerYearMap = yearlyMap.getOrDefault(player, new HashMap<>());
-        Map<String, Long> playerMonthMap = monthlyMap.getOrDefault(player, new HashMap<>());
+        Map<Integer, Long> yMap = yearlyMap.computeIfAbsent(player, k -> new HashMap<>());
+        Map<String, Long> mMap = monthlyMap.computeIfAbsent(player, k -> new HashMap<>());
 
-        playerYearMap.put(year, playerYearMap.getOrDefault(year, 0L) + amount);
-        playerMonthMap.put(monthStr, playerMonthMap.getOrDefault(monthStr, 0L) + amount);
+        yMap.put(year, yMap.getOrDefault(year, 0L) + amount);
+        mMap.put(monthStr, mMap.getOrDefault(monthStr, 0L) + amount);
 
-        yearlyMap.put(player, playerYearMap);
-        monthlyMap.put(player, playerMonthMap);
-
-        try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(totalFile, false), StandardCharsets.UTF_8))) {
+        // Ghi lại toàn bộ
+        try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
+                new FileOutputStream(totalFile, false), StandardCharsets.UTF_8))) {
             for (String p : totalMap.keySet()) {
-                long total = totalMap.get(p);
-                Map<Integer, Long> yMap = yearlyMap.getOrDefault(p, new HashMap<>());
-                Map<String, Long> mMap = monthlyMap.getOrDefault(p, new HashMap<>());
-
-                List<String> allData = new ArrayList<>();
-                for (Map.Entry<Integer, Long> entry : yMap.entrySet()) {
-                    allData.add(entry.getKey() + ":" + entry.getValue());
-                }
-                for (Map.Entry<String, Long> entry : mMap.entrySet()) {
-                    allData.add(entry.getKey() + ":" + entry.getValue());
-                }
-
-                writer.write(p + "|" + total + "|" + String.join(";", allData));
+                long tot = totalMap.get(p);
+                List<String> stats = new ArrayList<>();
+                yearlyMap.getOrDefault(p, Collections.emptyMap())
+                        .forEach((yr, v) -> stats.add(yr + ":" + v));
+                monthlyMap.getOrDefault(p, Collections.emptyMap())
+                        .forEach((mo, v) -> stats.add(mo + ":" + v));
+                writer.write(p + "|" + tot + "|" + String.join(";", stats));
                 writer.newLine();
             }
         } catch (IOException e) {
             plugin.getLogger().severe("❌ Không thể ghi file log_total.txt: " + e.getMessage());
         }
-
-        plugin.getCardDataCache().reload();
-        plugin.getLogger().info("[LOG] ✅ Ghi log nạp: " + player + " - " + amount + "đ");
     }
 
-    // Ghi log chi tiết cũ (giữ nguyên để tương thích nếu còn dùng nơi khác)
-    public static void log(String player, String telco, String serial, String code, int amount, int value, int status, String message) {
+    // Ghi log chi tiết cũ (nếu còn dùng)
+    public static void log(String player, String telco, String serial,
+                           String code, int amount, int value, int status, String message) {
         try {
-            File file = new File(JavaPlugin.getProvidingPlugin(LoggerUtil.class).getDataFolder(), "log_success.txt");
+            File file = new File(JavaPlugin.getProvidingPlugin(LoggerUtil.class)
+                    .getDataFolder(), "log_success.txt");
             file.getParentFile().mkdirs();
-
-            BufferedWriter writer = new BufferedWriter(new FileWriter(file, true));
-            String time = FORMAT.format(LocalDateTime.now());
-
-            String line = String.format(
-                    "[%s] | Player: %s | Telco: %s | Serial: %s | Code: %s | Amount: %d | Value: %d | Status: %d | Message: %s",
-                    time, player, telco, serial, code, amount, value, status, message
-            );
-
-            writer.write(line);
-            writer.newLine();
-            writer.flush();
-            writer.close();
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(file, true))) {
+                String time = FORMAT.format(LocalDateTime.now());
+                String line = String.format(
+                        "[%s] | Player: %s | Telco: %s | Serial: %s | Code: %s | Amount: %d | Value: %d | Status: %d | Message: %s",
+                        time, player, telco, serial, code, amount, value, status, message);
+                writer.write(line);
+                writer.newLine();
+            }
         } catch (IOException e) {
-            NapThePlugin.getInstance().getLogger().severe("Không thể ghi log chi tiết nạp thẻ: " + e.getMessage());
+            NapThePlugin.getInstance().getLogger()
+                    .severe("Không thể ghi log chi tiết nạp thẻ: " + e.getMessage());
         }
     }
 }
