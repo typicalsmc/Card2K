@@ -67,7 +67,7 @@ Các placeholder:
 %card2k_total_year%       Tổng tiền đã nạp trong năm  
 %card2k_top_month_1%      Top 1 tháng này  
 %card2k_top_year_1%       Top 1 năm nay  
-%card2k_top_total_1%      Top 1 mọi thời đại
+%card2k_top_total_1%      Top 1 tổng nạp 
 
 Ví dụ:
   /papi parse me %card2k_top_month_1%
