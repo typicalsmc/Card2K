@@ -64,12 +64,15 @@ milestones:
 Plugin sẽ tự động hook nếu PlaceholderAPI được cài.  
 Các placeholder:
 
-%card2k_total%            Tổng tiền đã nạp (mọi thời gian)  
-%card2k_total_month%      Tổng tiền đã nạp trong tháng  
-%card2k_total_year%       Tổng tiền đã nạp trong năm  
-%card2k_top_month_1%      Top 1 tháng này  
-%card2k_top_year_1%       Top 1 năm nay  
-%card2k_top_total_1%      Top 1 tổng nạp 
+%card2k_total%                          Tổng tiền đã nạp (mọi thời gian)  
+%card2k_total_month%                    Tổng tiền đã nạp trong tháng  
+%card2k_total_year%                     Tổng tiền đã nạp trong năm  
+%card2k_top_month_1%                    Top 1 tháng này  
+%card2k_top_year_1%                     Top 1 năm nay  
+%card2k_top_total_1%                    Top 1 tổng nạp 
+%card2k_top_month_1_amount%             Số tiền đã nạp cho top tháng
+%card2k_top_year_1_amount%              Số tiền đã nạp cho top năm
+%card2k_top_total_1_amount%             Số tiền đã nạp cho top tổng
 
 Ví dụ:
   /papi parse me %card2k_top_month_1%
