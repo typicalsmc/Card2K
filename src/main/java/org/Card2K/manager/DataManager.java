@@ -85,25 +85,6 @@ public class DataManager {
         return total;
     }
 
-    public synchronized void checkMilestones(String playerName, Player player) {
-        String key = playerName.toLowerCase();
-        int total = getTotal(key);
-
-        Map<Integer, List<String>> milestones = plugin.getConfig().getConfigurationSection("milestones.command") != null
-                ? parseMilestones()
-                : new HashMap<>();
-
-        for (Map.Entry<Integer, List<String>> entry : milestones.entrySet()) {
-            int threshold = entry.getKey();
-            String rewardKey = key + "#" + threshold;
-
-            if (total >= threshold && !rewardedMilestoneKeys.contains(rewardKey)) {
-                executeCommands(entry.getValue(), player);
-                rewardedMilestoneKeys.add(rewardKey);
-            }
-        }
-    }
-
     private Map<Integer, List<String>> parseMilestones() {
         Map<Integer, List<String>> map = new TreeMap<>();
         for (String key : plugin.getConfig().getConfigurationSection("milestones.command").getKeys(false)) {

@@ -5,6 +5,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.Card2K.command.NapTheCommand;
+import org.Card2K.command.ReloadCommand;
 import org.Card2K.manager.ConfigManager;
 import org.Card2K.manager.DataManager;
 import org.Card2K.util.CardDataCache;
@@ -34,7 +35,7 @@ public class NapThePlugin extends JavaPlugin {
         cardDataCache.reload();
 
         getCommand("napthe").setExecutor(new NapTheCommand(this));
-
+        getCommand("napthereload").setExecutor(new ReloadCommand(this));
         long placeholderTick = getConfig().getLong("placeholder_update", 300L);
         getServer().getScheduler().runTaskTimerAsynchronously(
                 this,

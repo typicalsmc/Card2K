@@ -166,18 +166,25 @@ public class CardDataManager {
 
     public synchronized void checkMilestones(String playerName, Player player) {
         if (!plugin.getConfig().getBoolean("milestones.enable", false)) return;
+
         int total = getTotal(playerName);
+        String key = playerName.toLowerCase();
+
+        // Đảm bảo người chơi có một Set mutable
+        Set<Integer> doneSet = playerMilestones.computeIfAbsent(key, k -> new HashSet<>());
+
         plugin.getConfig().getConfigurationSection("milestones.command").getKeys(false)
                 .stream().map(Integer::parseInt).sorted()
                 .forEach(th -> {
-                    if (total >= th && playerMilestones.getOrDefault(playerName, Collections.emptySet()).add(th)) {
+                    if (total >= th && doneSet.add(th)) {
                         plugin.getConfig().getStringList("milestones.command." + th)
                                 .forEach(cmd -> execute(cmd, player));
-                        saveDoneMilestones(playerName, playerMilestones.get(playerName));
+                        saveDoneMilestones(key, doneSet);
                         player.sendMessage("§aChúc mừng bạn đã đạt mốc nạp §e" + th + "đ§a!");
                     }
                 });
     }
+
 
     private void execute(String cmd, Player player) {
         String real = cmd.replace("{player}", player.getName());

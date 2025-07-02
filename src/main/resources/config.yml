@@ -1,8 +1,8 @@
 debug: false
 
 Card2kAPI:
-  key: '1728036362'
-  secret: 'Eb5dUIHgp17B3s6ecExG5P92Sd13VOHv'
+  key: '' #partner id ủa bnaj từ card2k.com
+  secret: '' #partner key của bạn từ card2k.com
 # Thời gian chờ trước khi kiểm tra trạng thái thẻ lần đầu (tính bằng phút)
 delay_before_reward: 2
 
