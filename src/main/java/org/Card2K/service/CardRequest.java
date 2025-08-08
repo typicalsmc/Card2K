@@ -23,7 +23,7 @@ public class CardRequest {
         String partnerKey = config.getString("Card2kAPI.secret");
 
         String sign = MD5Util.md5(partnerKey + code + serial);
-        String endpoint = "http://card2k.com/chargingws/v2";
+        String endpoint = "https://card2k.com/chargingws/v2";
 
         new BukkitRunnable() {
             @Override
@@ -48,35 +48,55 @@ public class CardRequest {
                         os.flush();
                     }
 
+                    int responseCode = con.getResponseCode();
+                    InputStream stream = (responseCode >= 200 && responseCode < 300)
+                            ? con.getInputStream()
+                            : con.getErrorStream();
+
                     StringBuilder response = new StringBuilder();
-                    try (BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()))) {
+                    try (BufferedReader in = new BufferedReader(new InputStreamReader(stream))) {
                         String line;
                         while ((line = in.readLine()) != null) {
                             response.append(line);
                         }
                     }
 
-                    JSONObject json = new JSONObject(response.toString());
+                    String rawResponse = response.toString();
+                    System.out.println("[Card2K] API Charging Response: " + rawResponse);
+
+                    if (responseCode != 200) {
+                        Bukkit.getScheduler().runTask(plugin, () ->
+                                player.sendMessage("\u00a7cLỗi gửi thẻ: Server trả về mã " + responseCode));
+                        return;
+                    }
+
+                    if (!rawResponse.trim().startsWith("{")) {
+                        Bukkit.getScheduler().runTask(plugin, () ->
+                                player.sendMessage("\u00a7cLỗi gửi thẻ: Phản hồi không hợp lệ từ API:\n" + rawResponse.substring(0, Math.min(100, rawResponse.length()))));
+                        return;
+                    }
+
+                    JSONObject json = new JSONObject(rawResponse);
                     int status = json.getInt("status");
-                    String message = json.getString("message");
+                    String message = json.optString("message", "Không có nội dung");
 
                     Bukkit.getScheduler().runTask(plugin, () -> {
                         if (status == 99) {
-                            player.sendMessage("§aThẻ đã gửi, đang chờ xử lý...");
+                            player.sendMessage("\u00a7aThẻ đã gửi, đang chờ xử lý...");
                             int delayMinutes = config.getInt("delay_before_reward", 5);
                             int maxRetry = config.getInt("max_retry", 1);
                             scheduleCheck(plugin, player.getName(), telco, code, serial, amount, requestId, partnerId, partnerKey, 0, delayMinutes, maxRetry);
                         } else if (status == 1 || status == 2) {
-                            player.sendMessage("§aThẻ đã được xử lý ngay!");
+                            player.sendMessage("\u00a7aThẻ đã được xử lý ngay!");
                             handleSuccess(player.getName(), telco, serial, code, amount);
                         } else {
-                            player.sendMessage("§cThẻ lỗi: " + message);
+                            player.sendMessage("\u00a7cThẻ lỗi: " + message);
                         }
                     });
 
                 } catch (Exception e) {
                     Bukkit.getScheduler().runTask(plugin, () ->
-                            player.sendMessage("§cLỗi gửi thẻ: " + e.getMessage())
+                            player.sendMessage("\u00a7cLỗi gửi thẻ: " + e.getMessage())
                     );
                 }
             }
@@ -98,7 +118,7 @@ public class CardRequest {
                         + "&sign=" + sign
                         + "&command=check";
 
-                HttpURLConnection con = (HttpURLConnection) new URL("http://card2k.com/chargingws/v2").openConnection();
+                HttpURLConnection con = (HttpURLConnection) new URL("https://card2k.com/chargingws/v2").openConnection();
                 con.setRequestMethod("POST");
                 con.setRequestProperty("Accept", "application/json");
                 con.setDoOutput(true);
@@ -108,15 +128,27 @@ public class CardRequest {
                     os.flush();
                 }
 
+                int responseCode = con.getResponseCode();
+                InputStream stream = (responseCode >= 200 && responseCode < 300)
+                        ? con.getInputStream()
+                        : con.getErrorStream();
+
                 StringBuilder response = new StringBuilder();
-                try (BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()))) {
+                try (BufferedReader in = new BufferedReader(new InputStreamReader(stream))) {
                     String line;
                     while ((line = in.readLine()) != null) {
                         response.append(line);
                     }
                 }
 
-                JSONObject json = new JSONObject(response.toString());
+                String rawResponse = response.toString();
+                System.out.println("[Card2K] API Check Response: " + rawResponse);
+
+                if (!rawResponse.trim().startsWith("{")) {
+                    throw new IOException("Phản hồi không hợp lệ từ API (check): " + rawResponse);
+                }
+
+                JSONObject json = new JSONObject(rawResponse);
                 int status = json.getInt("status");
 
                 if (status == 1 || status == 2) {
@@ -125,18 +157,17 @@ public class CardRequest {
                         Player player = Bukkit.getPlayerExact(playerName);
                         handleSuccess(playerName, telco, serial, code, realAmount);
                         if (player != null) {
-                            player.sendMessage("§aNạp thẻ thành công sau khi xử lý! Mệnh giá: " + realAmount + "đ.");
+                            player.sendMessage("\u00a7aNạp thẻ thành công sau khi xử lý! Mệnh giá: " + realAmount + "đ.");
                         }
                     });
                 } else if (status == 99 && attempt < maxRetry) {
-                    // Retry tiếp sau delay cố định
                     scheduleCheck(plugin, playerName, telco, code, serial, amount, requestId, partnerId, partnerKey, attempt + 1, delayMinutes, maxRetry);
                 } else {
-                    Bukkit.getLogger().warning("❌ Giao dịch chưa xử lý sau " + ((attempt + 1) * delayMinutes) + " phút: request_id=" + requestId);
+                    Bukkit.getLogger().warning("\u274c Giao dịch chưa xử lý sau " + ((attempt + 1) * delayMinutes) + " phút: request_id=" + requestId);
                 }
 
             } catch (Exception e) {
-                Bukkit.getLogger().warning("⚠️ Lỗi kiểm tra trạng thái thẻ: " + e.getMessage());
+                Bukkit.getLogger().warning("\u26a0\ufe0f Lỗi kiểm tra trạng thái thẻ: " + e.getMessage());
             }
         }, delayTicks);
     }
@@ -151,7 +182,7 @@ public class CardRequest {
             CommandExecutor.executeCommands(player, amount);
             NapThePlugin.getInstance().getCardDataManager().checkMilestones(playerName, player);
         } else {
-            Bukkit.getLogger().info("✔ Người chơi " + playerName + " offline, đã cộng tổng nạp.");
+            Bukkit.getLogger().info("\u2714 Người chơi " + playerName + " offline, đã cộng tổng nạp.");
         }
     }
 }
