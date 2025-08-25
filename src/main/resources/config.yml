@@ -31,43 +31,42 @@ card:
   command:
     10000:
       - 'console:points give {player} 10'
-      - 'op:broadcast {player} vừa ủng hộ 10k!'
+      - 'console:broadcast {player} vừa ủng hộ 10k!'
       - 'me vừa ủng hộ server 10k!'
     20000:
       - 'console:points give {player} 20'
-      - 'op:broadcast {player} vừa ủng hộ 20k!'
+      - 'console:broadcast {player} vừa ủng hộ 20k!'
       - 'me vừa ủng hộ server 20k!'
     30000:
       - 'console:points give {player} 30'
-      - 'op:broadcast {player} vừa ủng hộ 30k!'
+      - 'console:broadcast {player} vừa ủng hộ 30k!'
       - 'me vừa ủng hộ server 30k!'
     50000:
       - 'console:points give {player} 50'
-      - 'op:broadcast {player} vừa ủng hộ 50k!'
+      - 'console:broadcast {player} vừa ủng hộ 50k!'
       - 'me vừa ủng hộ server 50k!'
     100000:
       - 'console:points give {player} 100'
-      - 'op:broadcast {player} vừa ủng hộ 100k!'
+      - 'console:broadcast {player} vừa ủng hộ 100k!'
       - 'me vừa ủng hộ server 100k!'
     200000:
       - 'console:points give {player} 200'
-      - 'op:broadcast {player} vừa ủng hộ 200k!'
+      - 'console:broadcast {player} vừa ủng hộ 200k!'
       - 'me vừa ủng hộ server 200k!'
     300000:
       - 'console:points give {player} 300'
-      - 'op:broadcast {player} vừa ủng hộ 300k!'
+      - 'console:broadcast {player} vừa ủng hộ 300k!'
       - 'me vừa ủng hộ server 300k!'
     500000:
       - 'console:points give {player} 500'
-      - 'op:broadcast {player} vừa ủng hộ 500k!'
+      - 'console:broadcast {player} vừa ủng hộ 500k!'
       - 'me vừa ủng hộ server 500k!'
     1000000:
       - 'console:points give {player} 1000'
-      - 'op:broadcast {player} vừa ủng hộ 1 triệu!'
+      - 'console:broadcast {player} vừa ủng hộ 1 triệu!'
       - 'me vừa ủng hộ server 1tr!'
 
 # Tính năng tặng quà cho người theo các các mốc nạp
-
 
 # Thực hiện các lệnh khi đạt mốc tổng nạp
 milestones:

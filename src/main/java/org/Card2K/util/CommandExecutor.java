@@ -34,16 +34,13 @@ public class CommandExecutor {
                 if (cmd.startsWith("console:")) {
                     String real = cmd.substring("console:".length());
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), real);
-                } else if (cmd.startsWith("op:")) {
-                    String real = cmd.substring("op:".length());
-                    boolean wasOp = player.isOp();
-                    player.setOp(true);
+                } else if (cmd.startsWith("player:")) {
+                    String real = cmd.substring("player:".length());
                     player.performCommand(real);
-                    player.setOp(wasOp);
-                } else if (cmd.startsWith("me")) {
-                    player.chat("/" + cmd); // hoặc player.chat(cmd); tùy mục đích
+                } else if (cmd.startsWith("me ")) {
+                    player.chat("/" + cmd);
                 } else {
-                    player.performCommand(cmd);
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
                 }
             } catch (Exception e) {
                 NapThePlugin.getInstance().getLogger().severe("❌ Lỗi khi thực hiện lệnh: " + cmd);

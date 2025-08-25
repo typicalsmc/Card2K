@@ -188,15 +188,15 @@ public class CardDataManager {
 
     private void execute(String cmd, Player player) {
         String real = cmd.replace("{player}", player.getName());
-        if (real.startsWith("console:"))
+        if (real.startsWith("console:")) {
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), real.substring(8));
-        else if (real.startsWith("op:")) {
-            boolean wasOp = player.isOp();
-            player.setOp(true);
-            player.performCommand(real.substring(3));
-            player.setOp(wasOp);
-        } else player.performCommand(real);
+        } else if (real.startsWith("player:")) {
+            player.performCommand(real.substring(7));
+        } else {
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), real);
+        }
     }
+
 
     public CardDataCache getCache() {
         return plugin.getCardDataCache();

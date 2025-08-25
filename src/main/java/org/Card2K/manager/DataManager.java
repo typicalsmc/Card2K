@@ -102,16 +102,14 @@ public class DataManager {
             String real = cmd.replace("{player}", player.getName());
             if (cmd.startsWith("console:")) {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), real.substring("console:".length()));
-            } else if (cmd.startsWith("op:")) {
-                boolean wasOp = player.isOp();
-                player.setOp(true);
-                player.performCommand(real.substring("op:".length()));
-                player.setOp(wasOp);
+            } else if (cmd.startsWith("player:")) {
+                player.performCommand(real.substring("player:".length()));
             } else {
-                player.performCommand(real);
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), real);
             }
         }
     }
+
 
     public synchronized Map<String, Integer> readAllLogs() {
         return new HashMap<>(playerTotal);
