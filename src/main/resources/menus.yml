@@ -1,0 +1,133 @@
+menus:
+  chon_loai_the:
+    menu_title: "&8&lChọn loại thẻ"
+    open_command:
+      - napthe
+    size: 45
+    items:
+      viettel:
+        material: BOOK
+        slot: 10
+        display_name: "&bViettel"
+        lore:
+          - "&aĐang hoạt động"
+          - "&7Nhấn để chọn loại thẻ này"
+        action: "choosecard viettel"
+      vinaphone:
+        material: BOOK
+        slot: 12
+        display_name: "&bVinaphone"
+        lore:
+          - "&aĐang hoạt động"
+          - "&7Nhấn để chọn loại thẻ này"
+        action: "choosecard vinaphone"
+      mobifone:
+        material: BOOK
+        slot: 14
+        display_name: "&bMobifone"
+        lore:
+          - "&aĐang hoạt động"
+          - "&7Nhấn để chọn loại thẻ này"
+        action: "choosecard mobifone"
+      vietnamobile:
+        material: BOOK
+        slot: 16
+        display_name: "&bVietnamobile"
+        lore:
+          - "&aĐang hoạt động"
+          - "&7Nhấn để chọn loại thẻ này"
+        action: "choosecard vietnamobile"
+      gate:
+        material: BOOK
+        slot: 28
+        display_name: "&bGate"
+        lore:
+          - "&aĐang hoạt động"
+          - "&7Nhấn để chọn loại thẻ này"
+        action: "choosecard gate"
+      garena:
+        material: BOOK
+        slot: 30
+        display_name: "&bGarena"
+        lore:
+          - "&aĐang hoạt động"
+          - "&7Nhấn để chọn loại thẻ này"
+        action: "choosecard garena"
+      vcoin:
+        material: BOOK
+        slot: 32
+        display_name: "&bVcoin"
+        lore:
+          - "&aĐang hoạt động"
+          - "&7Nhấn để chọn loại thẻ này"
+        action: "choosecard vcoin"
+      zing:
+        material: BOOK
+        slot: 34
+        display_name: "&bZing"
+        lore:
+          - "&aĐang hoạt động"
+          - "&7Nhấn để chọn loại thẻ này"
+        action: "choosecard zing"
+
+  chon_menh_gia:
+    menu_title: "&8&lChọn mệnh giá thẻ"
+    open_command:
+      - menhgia
+    size: 27
+    items:
+      10k:
+        material: PAPER
+        slot: 10
+        display_name: "&a10.000 VNĐ"
+        action: "chooseprice 10000"
+      20k:
+        material: PAPER
+        slot: 11
+        display_name: "&a20.000 VNĐ"
+        action: "chooseprice 20000"
+      50k:
+        material: PAPER
+        slot: 12
+        display_name: "&a50.000 VNĐ"
+        action: "chooseprice 50000"
+      100k:
+        material: PAPER
+        slot: 13
+        display_name: "&a100.000 VNĐ"
+        action: "chooseprice 100000"
+      200k:
+        material: PAPER
+        slot: 14
+        display_name: "&a200.000 VNĐ"
+        action: "chooseprice 200000"
+      500k:
+        material: PAPER
+        slot: 15
+        display_name: "&a500.000 VNĐ"
+        action: "chooseprice 500000"
+
+  top_nap_the:
+    menu_title: "&e&lTOP NẠP THẺ"
+    size: 27
+    open_command:
+      - "napthe top"
+    items:
+      Top1:
+        material: EMERALD_BLOCK
+        slot: 4
+        display_name: "&6Top 1: &f%card2k_top_total_1%"
+        lore:
+          - "&7Số tiền: &a%card2k_top_total_1_amount%đ"
+      Top2:
+        material: DIAMOND_BLOCK
+        slot: 12
+        display_name: "&bTop 2: &f%card2k_top_total_2%"
+        lore:
+          - "&7Số tiền: &a%card2k_top_total_2_amount%đ"
+      Top3:
+        material: DIAMOND_BLOCK
+        slot: 14
+        display_name: "&bTop 3: &f%card2k_top_total_3%"
+        lore:
+          - "&7Số tiền: &a%card2k_top_total_3_amount%đ"

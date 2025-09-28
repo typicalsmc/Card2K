@@ -93,6 +93,7 @@ public class CardDataManager {
         todayMap.merge(key, amount, Integer::sum);
     }
 
+
     public synchronized int getTotal(String playerName) {
         return totalMap.getOrDefault(playerName.toLowerCase(), 0);
     }
@@ -170,7 +171,7 @@ public class CardDataManager {
         int total = getTotal(playerName);
         String key = playerName.toLowerCase();
 
-        // Đảm bảo người chơi có một Set mutable
+
         Set<Integer> doneSet = playerMilestones.computeIfAbsent(key, k -> new HashSet<>());
 
         plugin.getConfig().getConfigurationSection("milestones.command").getKeys(false)

@@ -2,6 +2,7 @@ package org.Card2K.command;
 
 import org.Card2K.NapThePlugin;
 import org.Card2K.gui.AnvilInputManager;
+import org.Card2K.menu.MenuManager;
 import org.Card2K.util.CardSelectionManager;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -14,108 +15,95 @@ public class NapTheCommand implements CommandExecutor {
 
     public NapTheCommand(NapThePlugin plugin) {
         this.plugin = plugin;
-        plugin.getCommand("napthe").setExecutor(this);
+        if (plugin.getCommand("napthe") != null) {
+            plugin.getCommand("napthe").setExecutor(this);
+        } else {
+            plugin.getLogger().warning("Command 'napthe' not defined in plugin.yml");
+        }
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage("§cLệnh này chỉ sử dụng trong game.");
-            return true;
+
+        if (args.length > 0 && args[0].equalsIgnoreCase("reload")) {
+            return handleReload(sender);
         }
 
-        Player player = (Player) sender;
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("§cChỉ người chơi mới có thể sử dụng lệnh này.");
+            return true;
+        }
 
         if (args.length == 0) {
-            if (plugin.getConfigManager().isFastCommandEnabled()) {
-                String telco = CardSelectionManager.getTelco(player.getUniqueId());
-                int amount = CardSelectionManager.getAmount(player.getUniqueId());
-                if (telco == null || amount <= 0) {
-                    player.sendMessage("§cBạn chưa chọn loại thẻ hoặc mệnh giá. Dùng §e/napthe help §cđể xem hướng dẫn.");
-                    return true;
-                }
-
-                AnvilInputManager input = new AnvilInputManager(plugin);
-                input.startInput(player, telco, amount);
-                return true;
-            } else {
-                sendHelp(player);
-                return true;
-            }
-        }
-
-        String subCommand = args[0];
-
-        if (subCommand.equalsIgnoreCase("help")) {
-            sendHelp(player);
+            new MenuManager(plugin).openMenu(player, "chon_loai_the");
             return true;
         }
 
-        if (subCommand.equalsIgnoreCase("choosecard")) {
-            if (args.length < 2) {
-                player.sendMessage("§cVui lòng nhập loại thẻ. VD: /napthe choosecard viettel");
-                return true;
-            }
-
-            String telco = args[1].toLowerCase();
-            CardSelectionManager.setTelco(player.getUniqueId(), telco);
-            player.sendMessage("§aĐã chọn loại thẻ: §e" + telco);
+        if (args.length >= 1 && args[0].equalsIgnoreCase("top")) {
+            new MenuManager(plugin).openMenu(player, "top_nap_the");
             return true;
         }
 
-        if (subCommand.equalsIgnoreCase("choosecardprice")) {
-            if (args.length < 2) {
-                player.sendMessage("§cVui lòng nhập mệnh giá. VD: /napthe choosecardprice 10000");
-                return true;
-            }
-
-            int amount;
-            try {
-                amount = Integer.parseInt(args[1]);
-            } catch (NumberFormatException e) {
-                player.sendMessage("§cMệnh giá không hợp lệ.");
-                return true;
-            }
-
-            CardSelectionManager.setAmount(player.getUniqueId(), amount);
-
-            String telco = CardSelectionManager.getTelco(player.getUniqueId());
-            if (telco == null) {
-                player.sendMessage("§cBạn chưa chọn loại thẻ. Dùng /napthe choosecard <loại>");
-                return true;
-            }
-
-            AnvilInputManager input = new AnvilInputManager(plugin);
-            input.startInput(player, telco, amount);
-            return true;
+        if (args.length == 2) {
+            return handleOpenInput(player, args);
         }
 
-        if (plugin.getConfigManager().isFastCommandEnabled() && args.length == 4) {
-            String telco = args[0];
-            int amount;
-            try {
-                amount = Integer.parseInt(args[1]);
-            } catch (NumberFormatException e) {
-                player.sendMessage("§cMệnh giá không hợp lệ.");
-                return true;
-            }
-            String serial = args[2];
-            String code = args[3];
-
-            AnvilInputManager input = new AnvilInputManager(plugin);
-            input.handleFastCommand(player, telco, amount, serial, code);
-            return true;
+        if (args.length >= 4) {
+            return handleFastCommand(player, args);
         }
 
-        player.sendMessage("§cLệnh không hợp lệ. Dùng §e/napthe help §cđể xem hướng dẫn.");
+        sendUsage(sender);
         return true;
     }
 
-    private void sendHelp(Player player) {
-        player.sendMessage("§6[Card2k] §fHướng dẫn sử dụng:");
-        player.sendMessage("§e/napthe để mở gui nạp thẻ");
-        player.sendMessage("§e/napthe choosecard <loại> §7- Chọn loại thẻ (viettel, vina, mobi...)");
-        player.sendMessage("§e/napthe choosecardprice <giá trị> §7- Nhập mệnh giá và mở giao diện nhập mã");
-        player.sendMessage("§e/napthe <loại thẻ> <giá trị> <serial> <mã thẻ> §7- Nạp nhanh nếu bật fastcmd");
+    private boolean handleReload(CommandSender sender) {
+        if (!sender.hasPermission("card2k.reload")) {
+            sender.sendMessage("§cBạn không có quyền thực hiện lệnh này.");
+            return true;
+        }
+
+        sender.sendMessage("§eĐang reload plugin Card2K...");
+        try {
+            plugin.reloadPlugin();
+            sender.sendMessage("§a✔ Plugin Card2K đã reload thành công.");
+        } catch (Exception e) {
+            sender.sendMessage("§c✘ Reload plugin thất bại: " + e.getMessage());
+            plugin.getLogger().severe("Lỗi khi reload plugin: " + e);
+        }
+        return true;
+    }
+
+    private boolean handleOpenInput(Player player, String[] args) {
+        String telco = args[0].toLowerCase();
+        try {
+            int amount = Integer.parseInt(args[1]);
+            CardSelectionManager.setTelco(player.getUniqueId(), telco);
+            CardSelectionManager.setAmount(player.getUniqueId(), amount);
+            new AnvilInputManager(plugin).startInput(player, telco, amount);
+        } catch (NumberFormatException ex) {
+            player.sendMessage("§cMệnh giá không hợp lệ. Ví dụ: /napthe viettel 10000");
+        }
+        return true;
+    }
+
+    private boolean handleFastCommand(Player player, String[] args) {
+        String telco = args[0].toLowerCase();
+        try {
+            int amount = Integer.parseInt(args[1]);
+            String serial = args[2];
+            String code = args[3];
+            new AnvilInputManager(plugin).handleFastCommand(player, telco, amount, serial, code);
+        } catch (NumberFormatException ex) {
+            player.sendMessage("§cMệnh giá không hợp lệ. Ví dụ: /napthe viettel 10000 123456 987654321");
+        }
+        return true;
+    }
+
+    private void sendUsage(CommandSender sender) {
+        sender.sendMessage("§eSử dụng: /napthe để mở menu");
+        sender.sendMessage("§eHoặc: /napthe <telco> <amount> (mở nhập mã & serial)");
+        sender.sendMessage("§eHoặc: /napthe <telco> <amount> <serial> <code> (gửi nhanh)");
+        sender.sendMessage("§eHoặc: /napthe top  — xem top nạp");
+        sender.sendMessage("§eHoặc: /napthe reload  — reload plugin ");
     }
 }

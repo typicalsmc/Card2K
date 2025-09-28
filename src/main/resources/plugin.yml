@@ -1,26 +1,27 @@
 name: Card2k
 main: org.Card2K.NapThePlugin
-version: 1.0
+version: 1.3-release
 api-version: 1.16
 author: Khanguyen.122
 description: Plugin nạp thẻ tự động qua API
 load: POSTWORLD
-depend: [PlaceholderAPI]
+softdepend: [PlaceholderAPI]
+folia-supported: true
 
 commands:
   napthe:
-    description: Nạp thẻ cào
-    usage: /napthe <loại thẻ> <mệnh giá> <seri> <mã thẻ>
+    description: Nạp thẻ cào hoặc reload plugin
+    usage: /napthe <loại> <mệnh giá> <seri> <mã thẻ> | /napthe reload
     permission: napthe.use
-    aliases: []
-  napthereload:
-    description: Reload plugin nạp thẻ
+  card2kreload:
+    description: Reload plugin Card2K
+    usage: /card2kreload
     permission: card2k.reload
-    usage: /napthereload
+
 permissions:
   napthe.use:
     description: Cho phép người dùng sử dụng lệnh /napthe
     default: true
   card2k.reload:
-    description: Cho phép reload plugin Card2k
+    description: Cho phép reload plugin Card2K
     default: op

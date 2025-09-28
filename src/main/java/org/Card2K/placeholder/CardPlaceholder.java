@@ -31,7 +31,7 @@ public class CardPlaceholder extends PlaceholderExpansion {
 
     @Override
     public String getVersion() {
-        return "1.0.1";
+        return "1.0.4";
     }
 
     @Override
@@ -53,20 +53,19 @@ public class CardPlaceholder extends PlaceholderExpansion {
                 : "";
         String param = params.toLowerCase();
 
-        // Tổng cộng
         switch (param) {
             case "total":
-                return String.valueOf(cache.getTotal(playerName));
+                return format(cache.getTotal(playerName));
             case "total_month":
-                return String.valueOf(cache.getTotalMonth(playerName));
+                return format(cache.getTotalMonth(playerName));
             case "total_year":
-                return String.valueOf(cache.getTotalYear(playerName));
+                return format(cache.getTotalYear(playerName));
         }
 
         if (param.startsWith("top_") && param.endsWith("_amount")) {
             String[] split = param.split("_");
             if (split.length == 4 && split[3].equals("amount")) {
-                String type = split[1]; // month, year, total
+                String type = split[1];
                 int rank;
                 try {
                     rank = Integer.parseInt(split[2]);
@@ -75,33 +74,19 @@ public class CardPlaceholder extends PlaceholderExpansion {
                 }
                 if (rank < 1 || rank > 10) return "N/A";
 
-                List<Map.Entry<String, Integer>> topList;
-                switch (type) {
-                    case "month":
-                        topList = cache.getTopMonth(10);
-                        break;
-                    case "year":
-                        topList = cache.getTopYear(10);
-                        break;
-                    case "total":
-                        topList = cache.getTopTotal(10);
-                        break;
-                    default:
-                        return "N/A";
-                }
-
+                List<Map.Entry<String, Integer>> topList = getTopList(type);
                 if (rank <= topList.size()) {
-                    return String.valueOf(topList.get(rank - 1).getValue());
-                } else {
-                    return "N/A";
+                    return format(topList.get(rank - 1).getValue());
                 }
+                return "N/A";
             }
         }
+
 
         if (param.startsWith("top_")) {
             String[] split = param.split("_");
             if (split.length == 3) {
-                String type = split[1]; // month, year, total
+                String type = split[1];
                 int rank;
                 try {
                     rank = Integer.parseInt(split[2]);
@@ -110,29 +95,43 @@ public class CardPlaceholder extends PlaceholderExpansion {
                 }
                 if (rank < 1 || rank > 10) return "N/A";
 
-                List<Map.Entry<String, Integer>> topList;
-                switch (type) {
-                    case "month":
-                        topList = cache.getTopMonth(10);
-                        break;
-                    case "year":
-                        topList = cache.getTopYear(10);
-                        break;
-                    case "total":
-                        topList = cache.getTopTotal(10);
-                        break;
-                    default:
-                        topList = Collections.emptyList();
-                }
-
+                List<Map.Entry<String, Integer>> topList = getTopList(type);
                 if (rank <= topList.size()) {
-                    return topList.get(rank - 1).getKey();
-                } else {
-                    return "N/A";
+                    Map.Entry<String, Integer> entry = topList.get(rank - 1);
+                    return formatTopDisplay(rank, entry.getKey(), entry.getValue());
                 }
+                return "N/A";
             }
         }
 
         return "";
+    }
+
+    private List<Map.Entry<String, Integer>> getTopList(String type) {
+        switch (type) {
+            case "month":
+                return cache.getTopMonth(10);
+            case "year":
+                return cache.getTopYear(10);
+            case "total":
+                return cache.getTopTotal(10);
+            default:
+                return Collections.emptyList();
+        }
+    }
+
+    private String formatTopDisplay(int rank, String name, int amount) {
+        String color;
+        switch (rank) {
+            case 1: color = "§6"; break;
+            case 2: color = "§b"; break;
+            case 3: color = "§a"; break;
+            default: color = "§e"; break;
+        }
+        return color + name + " §7- §f" + format(amount) + "đ";
+    }
+
+    private String format(int value) {
+        return String.format("%,d", value);
     }
 }

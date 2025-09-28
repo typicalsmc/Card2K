@@ -3,17 +3,19 @@ package org.Card2K.service;
 import org.Card2K.NapThePlugin;
 import org.Card2K.util.MD5Util;
 import org.Card2K.util.LoggerUtil;
-import org.Card2K.util.CommandExecutor;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitRunnable;
 import org.json.JSONObject;
 
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class CardRequest {
 
@@ -25,106 +27,24 @@ public class CardRequest {
         String sign = MD5Util.md5(partnerKey + code + serial);
         String endpoint = "https://card2k.com/chargingws/v2";
 
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                try {
-                    String data = "telco=" + URLEncoder.encode(telco, "UTF-8")
-                            + "&code=" + URLEncoder.encode(code, "UTF-8")
-                            + "&serial=" + URLEncoder.encode(serial, "UTF-8")
-                            + "&amount=" + amount
-                            + "&request_id=" + requestId
-                            + "&partner_id=" + partnerId
-                            + "&sign=" + sign
-                            + "&command=charging";
-
-                    HttpURLConnection con = (HttpURLConnection) new URL(endpoint).openConnection();
-                    con.setRequestMethod("POST");
-                    con.setRequestProperty("Accept", "application/json");
-                    con.setDoOutput(true);
-
-                    try (OutputStream os = con.getOutputStream()) {
-                        os.write(data.getBytes());
-                        os.flush();
-                    }
-
-                    int responseCode = con.getResponseCode();
-                    InputStream stream = (responseCode >= 200 && responseCode < 300)
-                            ? con.getInputStream()
-                            : con.getErrorStream();
-
-                    StringBuilder response = new StringBuilder();
-                    try (BufferedReader in = new BufferedReader(new InputStreamReader(stream))) {
-                        String line;
-                        while ((line = in.readLine()) != null) {
-                            response.append(line);
-                        }
-                    }
-
-                    String rawResponse = response.toString();
-                    System.out.println("[Card2K] API Charging Response: " + rawResponse);
-
-                    if (responseCode != 200) {
-                        Bukkit.getScheduler().runTask(plugin, () ->
-                                player.sendMessage("\u00a7cLỗi gửi thẻ: Server trả về mã " + responseCode));
-                        return;
-                    }
-
-                    if (!rawResponse.trim().startsWith("{")) {
-                        Bukkit.getScheduler().runTask(plugin, () ->
-                                player.sendMessage("\u00a7cLỗi gửi thẻ: Phản hồi không hợp lệ từ API:\n" + rawResponse.substring(0, Math.min(100, rawResponse.length()))));
-                        return;
-                    }
-
-                    JSONObject json = new JSONObject(rawResponse);
-                    int status = json.getInt("status");
-                    String message = json.optString("message", "Không có nội dung");
-
-                    Bukkit.getScheduler().runTask(plugin, () -> {
-                        if (status == 99) {
-                            player.sendMessage("\u00a7aThẻ đã gửi, đang chờ xử lý...");
-                            int delayMinutes = config.getInt("delay_before_reward", 5);
-                            int maxRetry = config.getInt("max_retry", 1);
-                            scheduleCheck(plugin, player.getName(), telco, code, serial, amount, requestId, partnerId, partnerKey, 0, delayMinutes, maxRetry);
-                        } else if (status == 1 || status == 2) {
-                            player.sendMessage("\u00a7aThẻ đã được xử lý ngay!");
-                            handleSuccess(player.getName(), telco, serial, code, amount);
-                        } else {
-                            player.sendMessage("\u00a7cThẻ lỗi: " + message);
-                        }
-                    });
-
-                } catch (Exception e) {
-                    Bukkit.getScheduler().runTask(plugin, () ->
-                            player.sendMessage("\u00a7cLỗi gửi thẻ: " + e.getMessage())
-                    );
-                }
-            }
-        }.runTaskAsynchronously(plugin);
-    }
-
-    private static void scheduleCheck(NapThePlugin plugin, String playerName, String telco, String code, String serial, int amount, String requestId, String partnerId, String partnerKey, int attempt, int delayMinutes, int maxRetry) {
-        long delayTicks = 20L * 60 * delayMinutes;
-
-        Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, () -> {
+        new Thread(() -> {
             try {
-                String sign = MD5Util.md5(partnerKey + code + serial);
-                String checkData = "telco=" + URLEncoder.encode(telco, "UTF-8")
-                        + "&code=" + URLEncoder.encode(code, "UTF-8")
-                        + "&serial=" + URLEncoder.encode(serial, "UTF-8")
+                String data = "telco=" + URLEncoder.encode(telco, StandardCharsets.UTF_8)
+                        + "&code=" + URLEncoder.encode(code, StandardCharsets.UTF_8)
+                        + "&serial=" + URLEncoder.encode(serial, StandardCharsets.UTF_8)
                         + "&amount=" + amount
                         + "&request_id=" + requestId
                         + "&partner_id=" + partnerId
                         + "&sign=" + sign
-                        + "&command=check";
+                        + "&command=charging";
 
-                HttpURLConnection con = (HttpURLConnection) new URL("https://card2k.com/chargingws/v2").openConnection();
+                HttpURLConnection con = (HttpURLConnection) new URL(endpoint).openConnection();
                 con.setRequestMethod("POST");
                 con.setRequestProperty("Accept", "application/json");
                 con.setDoOutput(true);
 
                 try (OutputStream os = con.getOutputStream()) {
-                    os.write(checkData.getBytes());
+                    os.write(data.getBytes(StandardCharsets.UTF_8));
                     os.flush();
                 }
 
@@ -134,7 +54,7 @@ public class CardRequest {
                         : con.getErrorStream();
 
                 StringBuilder response = new StringBuilder();
-                try (BufferedReader in = new BufferedReader(new InputStreamReader(stream))) {
+                try (BufferedReader in = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
                     String line;
                     while ((line = in.readLine()) != null) {
                         response.append(line);
@@ -142,47 +62,159 @@ public class CardRequest {
                 }
 
                 String rawResponse = response.toString();
-                System.out.println("[Card2K] API Check Response: " + rawResponse);
+                plugin.getLogger().info(ChatColor.GREEN + "[Card2K] Charging Response: " + ChatColor.RESET + rawResponse);
+
+                if (responseCode != 200) {
+                    plugin.enqueueMain(() -> player.sendMessage(ChatColor.RED + "✘ Lỗi gửi thẻ: Server trả về mã " + responseCode));
+                    return;
+                }
 
                 if (!rawResponse.trim().startsWith("{")) {
-                    throw new IOException("Phản hồi không hợp lệ từ API (check): " + rawResponse);
+                    plugin.enqueueMain(() -> player.sendMessage(ChatColor.RED + "✘ Lỗi gửi thẻ: Phản hồi không hợp lệ từ API."));
+                    return;
                 }
 
                 JSONObject json = new JSONObject(rawResponse);
-                int status = json.getInt("status");
+                int status = json.optInt("status", -1);
 
-                if (status == 1 || status == 2) {
-                    int realAmount = json.optInt("value", amount);
-                    Bukkit.getScheduler().runTask(plugin, () -> {
-                        Player player = Bukkit.getPlayerExact(playerName);
-                        handleSuccess(playerName, telco, serial, code, realAmount);
-                        if (player != null) {
-                            player.sendMessage("\u00a7aNạp thẻ thành công sau khi xử lý! Mệnh giá: " + realAmount + "đ.");
-                        }
-                    });
-                } else if (status == 99 && attempt < maxRetry) {
-                    scheduleCheck(plugin, playerName, telco, code, serial, amount, requestId, partnerId, partnerKey, attempt + 1, delayMinutes, maxRetry);
-                } else {
-                    Bukkit.getLogger().warning("\u274c Giao dịch chưa xử lý sau " + ((attempt + 1) * delayMinutes) + " phút: request_id=" + requestId);
-                }
+                plugin.enqueueMain(() -> {
+                    if (status == 99 || status == 1 || status == 2) {
+                        player.sendMessage(ChatColor.YELLOW + "✔ Thẻ của bạn đã gửi thành công, đang chờ xử lý...");
+                        plugin.getLogger().info(ChatColor.AQUA + "[Card2K] Thẻ gửi thành công: request_id=" + requestId);
+                        scheduleCheck(plugin, player.getName(), telco, code, serial, amount, requestId, partnerId, partnerKey);
+                    } else {
+                        player.sendMessage(ChatColor.RED + "✘ Nạp thẻ thất bại: " + json.optString("message", "Không có nội dung") + " (status: " + status + ")");
+                        plugin.getLogger().warning("[Card2K] Lỗi nạp thẻ: status=" + status + ", message=" + json.optString("message", "Không có nội dung"));
+                    }
+                });
 
             } catch (Exception e) {
-                Bukkit.getLogger().warning("\u26a0\ufe0f Lỗi kiểm tra trạng thái thẻ: " + e.getMessage());
+                plugin.enqueueMain(() -> player.sendMessage(ChatColor.RED + "✘ Lỗi gửi thẻ: " + e.getMessage()));
+                plugin.getLogger().warning("[Card2K] Lỗi requestCard: " + e.toString());
             }
-        }, delayTicks);
+        }, "Card2K-RequestThread-" + requestId).start();
+    }
+
+    private static void scheduleCheck(NapThePlugin plugin, String playerName, String telco, String code, String serial, int amount,
+                                      String requestId, String partnerId, String partnerKey) {
+
+        final int checkIntervalSeconds = 10;
+        final int maxCheckMinutes = 3;
+        final int maxAttempts = (maxCheckMinutes * 60) / checkIntervalSeconds;
+
+        AtomicInteger taskIdHolder = new AtomicInteger(-1);
+
+        int taskId = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, new Runnable() {
+            int attempts = 0;
+            boolean success = false;
+
+            @Override
+            public void run() {
+                attempts++;
+                if (success || attempts > maxAttempts) {
+                    Bukkit.getScheduler().cancelTask(taskIdHolder.get());
+                    if (!success) {
+                        plugin.getLogger().info(ChatColor.YELLOW + "[Card2K] Dừng kiểm tra sau " + attempts + " lần (timeout): request_id=" + requestId);
+                    }
+                    return;
+                }
+
+                try {
+                    String sign = MD5Util.md5(partnerKey + code + serial);
+                    String checkData = "telco=" + URLEncoder.encode(telco, StandardCharsets.UTF_8)
+                            + "&code=" + URLEncoder.encode(code, StandardCharsets.UTF_8)
+                            + "&serial=" + URLEncoder.encode(serial, StandardCharsets.UTF_8)
+                            + "&amount=" + amount
+                            + "&request_id=" + requestId
+                            + "&partner_id=" + partnerId
+                            + "&sign=" + sign
+                            + "&command=check";
+
+                    HttpURLConnection con = (HttpURLConnection) new URL("https://card2k.com/chargingws/v2").openConnection();
+                    con.setRequestMethod("POST");
+                    con.setRequestProperty("Accept", "application/json");
+                    con.setDoOutput(true);
+
+                    try (OutputStream os = con.getOutputStream()) {
+                        os.write(checkData.getBytes(StandardCharsets.UTF_8));
+                        os.flush();
+                    }
+
+                    int responseCode = con.getResponseCode();
+                    InputStream stream = (responseCode >= 200 && responseCode < 300)
+                            ? con.getInputStream()
+                            : con.getErrorStream();
+
+                    StringBuilder response = new StringBuilder();
+                    try (BufferedReader in = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+                        String line;
+                        while ((line = in.readLine()) != null) response.append(line);
+                    }
+
+                    String rawResponse = response.toString();
+
+                    plugin.getLogger().info(ChatColor.GRAY + "[Card2K] Kiểm tra request_id=" + requestId + ", attempt=" + attempts);
+
+                    if (!rawResponse.trim().startsWith("{")) {
+                        plugin.getLogger().warning("[Card2K] Check trả về không phải JSON: " + rawResponse);
+                        return;
+                    }
+
+                    JSONObject json = new JSONObject(rawResponse);
+                    int status = json.optInt("status", -1);
+
+                    if (status == 1 || status == 2) {
+                        int realAmount = json.optInt("value", amount);
+                        success = true;
+
+                        Bukkit.getScheduler().runTask(plugin, () -> {
+                            handleSuccess(playerName, telco, serial, code, realAmount);
+                            Player player = Bukkit.getPlayerExact(playerName);
+                            if (player != null) {
+                                player.sendMessage(ChatColor.GREEN + "✔ Nạp thẻ thành công sau khi xử lý! Mệnh giá: " + realAmount + "đ.");
+                            }
+                        });
+                        Bukkit.getScheduler().cancelTask(taskIdHolder.get());
+
+                    } else if (status == 99) {
+
+                    } else {
+                        plugin.getLogger().warning(ChatColor.RED + "[Card2K] Giao dịch thất bại (status=" + status + "): " + json.optString("message", ""));
+                        Bukkit.getScheduler().cancelTask(taskIdHolder.get());
+                    }
+
+                } catch (Exception e) {
+                    plugin.getLogger().warning("[Card2K] Lỗi kiểm tra trạng thái thẻ: " + e.getMessage());
+                    Bukkit.getScheduler().cancelTask(taskIdHolder.get());
+                }
+            }
+        }, 0L, checkIntervalSeconds * 20L).getTaskId();
+
+        taskIdHolder.set(taskId);
     }
 
     private static void handleSuccess(String playerName, String telco, String serial, String code, int amount) {
         LoggerUtil.logSuccess(playerName, telco, serial, code, amount);
-
         NapThePlugin.getInstance().getCardDataManager().addPlayerAmount(playerName, amount);
 
         Player player = Bukkit.getPlayerExact(playerName);
         if (player != null) {
-            CommandExecutor.executeCommands(player, amount);
-            NapThePlugin.getInstance().getCardDataManager().checkMilestones(playerName, player);
+            List<String> commands = NapThePlugin.getInstance().getConfig().getStringList("card.command." + amount);
+            if (commands != null) {
+                for (String cmd : commands) {
+                    String command = cmd.replace("{player}", playerName);
+                    NapThePlugin.runOnMainThread(() ->
+                            Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), command)
+                    );
+                }
+            }
+            NapThePlugin.runOnMainThread(() ->
+                    NapThePlugin.getInstance().getCardDataManager().checkMilestones(playerName, player)
+            );
         } else {
-            Bukkit.getLogger().info("\u2714 Người chơi " + playerName + " offline, đã cộng tổng nạp.");
+            NapThePlugin.runOnMainThread(() ->
+                    Bukkit.getLogger().info(ChatColor.GREEN + "✔ Người chơi " + playerName + " offline, đã cộng tổng nạp.")
+            );
         }
     }
 }

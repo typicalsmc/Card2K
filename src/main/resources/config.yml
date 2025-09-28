@@ -3,11 +3,7 @@ debug: false
 Card2kAPI:
   key: '' #partner id ủa bnaj từ card2k.com
   secret: '' #partner key của bạn từ card2k.com
-# Thời gian chờ trước khi kiểm tra trạng thái thẻ lần đầu (tính bằng phút)
-delay_before_reward: 2
 
-# Số lần kiểm tra lại nếu status vẫn là 99 (0 = không kiểm tra lại)
-max_retry: 1
 
 # Thời gian mà placeholder cập nhật, tính theo tick (20 tick = 1s)
 placeholder_update: 300

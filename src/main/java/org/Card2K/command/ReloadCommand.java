@@ -11,6 +11,9 @@ public class ReloadCommand implements CommandExecutor {
 
     public ReloadCommand(NapThePlugin plugin) {
         this.plugin = plugin;
+        if (plugin.getCommand("card2kreload") != null) {
+            plugin.getCommand("card2kreload").setExecutor(this);
+        }
     }
 
     @Override
@@ -20,8 +23,14 @@ public class ReloadCommand implements CommandExecutor {
             return true;
         }
 
-        plugin.reloadPlugin();
-        sender.sendMessage("§aPlugin đã được reload thành công!");
+        sender.sendMessage("§eĐang reload plugin Card2K...");
+        try {
+            plugin.reloadPlugin();
+            sender.sendMessage("§a✔ Plugin Card2K đã reload thành công.");
+        } catch (Exception e) {
+            sender.sendMessage("§c✘ Reload plugin thất bại: " + e.getMessage());
+            plugin.getLogger().severe("Lỗi khi reload plugin: " + e);
+        }
         return true;
     }
 }

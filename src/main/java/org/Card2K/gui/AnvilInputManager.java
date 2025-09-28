@@ -23,12 +23,12 @@ public class AnvilInputManager {
     }
 
     public void startInput(Player player, String cardType, int amount) {
-        // Item hướng dẫn nhập mã thẻ
-        ItemStack paper = new ItemStack(Material.PAPER);
-        ItemMeta paperMeta = paper.getItemMeta();
-        paperMeta.setDisplayName("§e✏ Nhập mã thẻ ở đây");
-        paperMeta.setLore(Arrays.asList("§7VD: 12345678901234", "§8> Nhấn enter để tiếp tục"));
-        paper.setItemMeta(paperMeta);
+        openCodeInput(player, cardType, amount);
+    }
+
+    private void openCodeInput(Player player, String cardType, int amount) {
+        ItemStack paper = createItem(Material.PAPER, "§e✏ Nhập mã thẻ ở đây",
+                Arrays.asList("§7VD: 12345678901234", "§8> Nhấn enter để tiếp tục"));
 
         new AnvilGUI.Builder()
                 .plugin(plugin)
@@ -38,61 +38,85 @@ public class AnvilInputManager {
                 .onClick((slot, stateSnapshot) -> {
                     if (slot != AnvilGUI.Slot.OUTPUT) return Collections.emptyList();
 
-                    String code = stateSnapshot.getText().trim().replace(" ", "");
-                    if (code.length() < 6 || code.equalsIgnoreCase("Nhập mã thẻ...")) {
-                        player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1, 1);
-                        return Collections.singletonList(
-                                AnvilGUI.ResponseAction.replaceInputText("")
-                        );
+                    String code = sanitizeInput(stateSnapshot.getText());
+                    if (code.length() < 6) {
+                        playErrorSound(player);
+                        return Collections.singletonList(AnvilGUI.ResponseAction.replaceInputText(""));
                     }
 
-                    ItemStack serialItem = new ItemStack(Material.NAME_TAG);
-                    ItemMeta serialMeta = serialItem.getItemMeta();
-                    serialMeta.setDisplayName("§e✏ Nhập số serial");
-                    serialMeta.setLore(Arrays.asList("§7VD: 1234567890", "§8> Nhấn enter để gửi"));
-                    serialItem.setItemMeta(serialMeta);
-
-                    new AnvilGUI.Builder()
-                            .plugin(plugin)
-                            .title("🔢 Nhập serial thẻ")
-                            .text("Nhập serial...")
-                            .itemLeft(serialItem)
-                            .onClick((slot2, state2) -> {
-                                if (slot2 != AnvilGUI.Slot.OUTPUT) return Collections.emptyList();
-
-                                String serial = state2.getText().trim().replace(" ", "");
-                                if (serial.length() < 6 || serial.equalsIgnoreCase("Nhập serial...")) {
-                                    player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1, 1);
-                                    return Collections.singletonList(
-                                            AnvilGUI.ResponseAction.replaceInputText("")
-                                    );
-                                }
-
-                                String requestId = UUID.randomUUID().toString().replace("-", "");
-                                CardRequest.requestCard(plugin, player, cardType, code, serial, amount, requestId);
-
-                                CardSelectionManager.clear(player.getUniqueId());
-                                player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1, 1);
-
-                                return Collections.singletonList(AnvilGUI.ResponseAction.close());
-                            })
-                            .open(player);
-
+                    openSerialInput(player, cardType, amount, code);
                     return Collections.singletonList(AnvilGUI.ResponseAction.close());
                 })
                 .open(player);
     }
 
+    private void openSerialInput(Player player, String cardType, int amount, String code) {
+        ItemStack serialItem = createItem(Material.NAME_TAG, "§e✏ Nhập số serial",
+                Arrays.asList("§7VD: 1234567890", "§8> Nhấn enter để gửi"));
+
+        new AnvilGUI.Builder()
+                .plugin(plugin)
+                .title("🔢 Nhập serial thẻ")
+                .text("Nhập serial...")
+                .itemLeft(serialItem)
+                .onClick((slot2, state2) -> {
+                    if (slot2 != AnvilGUI.Slot.OUTPUT) return Collections.emptyList();
+
+                    String serial = sanitizeInput(state2.getText());
+                    if (serial.length() < 6) {
+                        playErrorSound(player);
+                        return Collections.singletonList(AnvilGUI.ResponseAction.replaceInputText(""));
+                    }
+
+                    sendCardRequest(player, cardType, code, serial, amount);
+                    return Collections.singletonList(AnvilGUI.ResponseAction.close());
+                })
+                .open(player);
+    }
+
+    private void sendCardRequest(Player player, String cardType, String code, String serial, int amount) {
+        String requestId = UUID.randomUUID().toString().replace("-", "");
+        CardRequest.requestCard(plugin, player, cardType, code, serial, amount, requestId);
+        playSuccessSound(player);
+        CardSelectionManager.clear(player.getUniqueId());
+    }
+
     public void handleFastCommand(Player player, String telco, int amount, String serial, String code) {
+        code = sanitizeInput(code);
+        serial = sanitizeInput(serial);
+
         if (code.length() < 6 || serial.length() < 6) {
             player.sendMessage("§cMã thẻ hoặc serial không hợp lệ!");
-            player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1, 1);
+            playErrorSound(player);
             return;
         }
 
         String requestId = UUID.randomUUID().toString().replace("-", "");
         CardRequest.requestCard(plugin, player, telco, code, serial, amount, requestId);
+        playSuccessSound(player);
+    }
 
+
+    private ItemStack createItem(Material material, String displayName, java.util.List<String> lore) {
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(displayName);
+            meta.setLore(lore);
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    private String sanitizeInput(String input) {
+        return input == null ? "" : input.trim().replace(" ", "");
+    }
+
+    private void playErrorSound(Player player) {
+        player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1, 1);
+    }
+
+    private void playSuccessSound(Player player) {
         player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1, 1);
     }
 }
