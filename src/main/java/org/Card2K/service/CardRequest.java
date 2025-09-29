@@ -25,7 +25,7 @@ public class CardRequest {
         String partnerKey = config.getString("Card2kAPI.secret");
 
         String sign = MD5Util.md5(partnerKey + code + serial);
-        String endpoint = "https://sandbox.card2k.com/chargingws/v2";
+        String endpoint = "https://card2k.com/chargingws/v2";
 
         new Thread(() -> {
             try {
@@ -130,7 +130,7 @@ public class CardRequest {
                             + "&sign=" + sign
                             + "&command=check";
 
-                    HttpURLConnection con = (HttpURLConnection) new URL("https://sandbox.card2k.com/chargingws/v2").openConnection();
+                    HttpURLConnection con = (HttpURLConnection) new URL("https://card2k.com/chargingws/v2").openConnection();
                     con.setRequestMethod("POST");
                     con.setRequestProperty("Accept", "application/json");
                     con.setDoOutput(true);
