@@ -7,14 +7,15 @@ import org.Card2K.NapThePlugin;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class DataManager {
 
     private final NapThePlugin plugin;
     private final File logFile;
 
-    private final Map<String, Integer> playerTotal = new HashMap<>();
-    private final Set<String> rewardedMilestoneKeys = new HashSet<>();
+    private final Map<String, Integer> playerTotal = new ConcurrentHashMap<>();
+    private final Set<String> rewardedMilestoneKeys = ConcurrentHashMap.newKeySet();
 
     public DataManager(NapThePlugin plugin) {
         this.plugin = plugin;
@@ -24,7 +25,7 @@ public class DataManager {
         loadTotals();
     }
 
-    public synchronized void reload() {
+    public void reload() {
         playerTotal.clear();
         rewardedMilestoneKeys.clear();
         loadTotals();
@@ -63,7 +64,7 @@ public class DataManager {
         }
     }
 
-    public synchronized void addPlayerAmount(String playerName, int amount) {
+    public void addPlayerAmount(String playerName, int amount) {
         String key = playerName.toLowerCase();
         playerTotal.put(key, playerTotal.getOrDefault(key, 0) + amount);
 
@@ -76,7 +77,7 @@ public class DataManager {
         }
     }
 
-    public synchronized int getTotal(String playerName) {
+    public int getTotal(String playerName) {
         String key = playerName.toLowerCase();
         int total = playerTotal.getOrDefault(key, 0);
         if (plugin.getConfig().getBoolean("debug", false)) {
@@ -111,7 +112,7 @@ public class DataManager {
     }
 
 
-    public synchronized Map<String, Integer> readAllLogs() {
-        return new HashMap<>(playerTotal);
+    public Map<String, Integer> readAllLogs() {
+        return new ConcurrentHashMap<>(playerTotal);
     }
 }

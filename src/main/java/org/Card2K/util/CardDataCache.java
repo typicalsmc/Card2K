@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public class CardDataCache {
@@ -20,9 +21,9 @@ public class CardDataCache {
     private String currentMonth;
     private String currentYear;
 
-    private final Map<String, Integer> totalMap = new HashMap<>();
-    private final Map<String, Integer> monthMap = new HashMap<>();
-    private final Map<String, Integer> yearMap = new HashMap<>();
+    private final Map<String, Integer> totalMap = new ConcurrentHashMap<>();
+    private final Map<String, Integer> monthMap = new ConcurrentHashMap<>();
+    private final Map<String, Integer> yearMap = new ConcurrentHashMap<>();
 
     public CardDataCache(NapThePlugin plugin) {
         this.plugin = plugin;
@@ -30,7 +31,7 @@ public class CardDataCache {
         reload();
     }
 
-    public synchronized void reload() {
+    public void reload() {
         totalMap.clear();
         monthMap.clear();
         yearMap.clear();
@@ -82,33 +83,33 @@ public class CardDataCache {
     }
 
 
-    public synchronized int getTotal(String player) {
+    public int getTotal(String player) {
         return totalMap.getOrDefault(player.toLowerCase(), 0);
     }
 
-    public synchronized int getTotalMonth(String player) {
+    public int getTotalMonth(String player) {
         return monthMap.getOrDefault(player.toLowerCase(), 0);
     }
 
-    public synchronized int getTotalYear(String player) {
+    public int getTotalYear(String player) {
         return yearMap.getOrDefault(player.toLowerCase(), 0);
     }
 
-    public synchronized List<Map.Entry<String, Integer>> getTopTotal(int limit) {
+    public List<Map.Entry<String, Integer>> getTopTotal(int limit) {
         return totalMap.entrySet().stream()
                 .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
                 .limit(limit)
                 .collect(Collectors.toList());
     }
 
-    public synchronized List<Map.Entry<String, Integer>> getTopMonth(int limit) {
+    public List<Map.Entry<String, Integer>> getTopMonth(int limit) {
         return monthMap.entrySet().stream()
                 .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
                 .limit(limit)
                 .collect(Collectors.toList());
     }
 
-    public synchronized List<Map.Entry<String, Integer>> getTopYear(int limit) {
+    public List<Map.Entry<String, Integer>> getTopYear(int limit) {
         return yearMap.entrySet().stream()
                 .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
                 .limit(limit)

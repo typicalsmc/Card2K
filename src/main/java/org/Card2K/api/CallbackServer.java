@@ -22,14 +22,15 @@ public class CallbackServer {
 
     public static void addPendingRequest(String requestId, String playerName, String telco, String code, String serial, int amount) {
         pendingRequests.put(requestId, playerName);
-
-        Bukkit.getScheduler().runTaskLaterAsynchronously(NapThePlugin.getInstance(), () -> {
+        // Schedule first check after 5 minutes (run only once by using very large period)
+        NapThePlugin.getInstance().getFoliaLib().getScheduler().runTimerAsync(() -> {
             checkStatus(requestId, playerName, telco, code, serial, amount, false);
-        }, 20L * 60 * 5);
+        }, 20L * 60 * 5, Long.MAX_VALUE);
 
-        Bukkit.getScheduler().runTaskLaterAsynchronously(NapThePlugin.getInstance(), () -> {
+        // Schedule second check after 10 minutes (run only once by using very large period)
+        NapThePlugin.getInstance().getFoliaLib().getScheduler().runTimerAsync(() -> {
             checkStatus(requestId, playerName, telco, code, serial, amount, true);
-        }, 20L * 60 * 10);
+        }, 20L * 60 * 10, Long.MAX_VALUE);
     }
 
     private static void checkStatus(String requestId, String playerName, String telco, String code, String serial, int amount, boolean finalTry) {
@@ -69,7 +70,7 @@ public class CallbackServer {
             int status = json.getInt("status");
 
             if (status == 1 || status == 2) {
-                Bukkit.getScheduler().runTask(NapThePlugin.getInstance(), () -> {
+                NapThePlugin.getInstance().getFoliaLib().getScheduler().runNextTick(task -> {
                     Player player = Bukkit.getPlayerExact(playerName);
                     LoggerUtil.logSuccess(playerName, telco, serial, code, amount);
 

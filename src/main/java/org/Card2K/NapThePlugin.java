@@ -1,5 +1,6 @@
 package org.Card2K;
 
+import org.Card2K.command.ReloadCommand;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -9,15 +10,12 @@ import org.Card2K.command.NapTheCommand;
 import org.Card2K.manager.ConfigManager;
 import org.Card2K.manager.DataManager;
 import org.Card2K.placeholder.CardPlaceholder;
-import org.Card2K.scheduler.PaperSchedulerAdapter;
-import org.Card2K.scheduler.SpigotSchedulerAdapter;
-import org.Card2K.scheduler.SchedulerAdapter;
 import org.Card2K.menu.MenuListener;
 import org.Card2K.util.CardDataCache;
 import org.Card2K.util.CardDataManager;
+import com.tcoded.folialib.FoliaLib;
 
 import java.io.File;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
@@ -29,11 +27,9 @@ public class NapThePlugin extends JavaPlugin {
     private DataManager dataManager;
     private CardDataManager cardDataManager;
     private CardDataCache cardDataCache;
-    private SchedulerAdapter scheduler;
+    private FoliaLib foliaLib;
     private FileConfiguration menusConfig;
-    private String detectedServerType = "Unknown";
 
-    private final ConcurrentLinkedQueue<Runnable> mainQueue = new ConcurrentLinkedQueue<>();
 
     private final ScheduledExecutorService httpExecutor = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
         @Override
@@ -64,26 +60,22 @@ public class NapThePlugin extends JavaPlugin {
         }
 
         new NapTheCommand(this);
+        new ReloadCommand(this);
         getServer().getPluginManager().registerEvents(new MenuListener(this), this);
 
-        scheduler = detectScheduler();
-        if (scheduler != null) {
-            getLogger().info("⚙ Scheduler type: " + detectedServerType);
-            scheduler.startRepeatingTask(this::runMainQueue, 50L);
+        foliaLib = new FoliaLib(this);
+        getLogger().info("⚙ Scheduler type: " + (foliaLib.isFolia() ? "Folia" : foliaLib.isPaper() ? "Paper" : "Spigot"));
 
-            long placeholderTick = getConfig().getLong("placeholder_update", 300L);
-            scheduler.startRepeatingTask(() -> {
-                try {
-                    cardDataCache.reload();
-                } catch (Exception ex) {
-                    getLogger().warning("Error reloading card cache: " + ex.getMessage());
-                    ex.printStackTrace();
-                }
-            }, placeholderTick);
-        } else {
-            Bukkit.getScheduler().runTaskTimer(this, this::runMainQueue, 50L, 50L);
-            getLogger().warning("⚠ SchedulerAdapter not available; falling back to Bukkit scheduler for mainQueue.");
-        }
+
+        long placeholderTick = getConfig().getLong("placeholder_update", 300L);
+        foliaLib.getScheduler().runTimer(() -> {
+            try {
+                cardDataCache.reload();
+            } catch (Exception ex) {
+                getLogger().warning("Error reloading card cache: " + ex.getMessage());
+                ex.printStackTrace();
+            }
+        }, placeholderTick, placeholderTick);
 
         if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
             new CardPlaceholder(this, cardDataCache).register();
@@ -95,9 +87,9 @@ public class NapThePlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        if (scheduler != null) {
+        if (foliaLib != null) {
             try {
-                scheduler.cancelAll();
+                foliaLib.getScheduler().cancelAllTasks();
             } catch (Exception ex) {
                 getLogger().warning("Lỗi khi hủy tất cả task: " + ex.getMessage());
                 ex.printStackTrace();
@@ -118,24 +110,7 @@ public class NapThePlugin extends JavaPlugin {
     public DataManager getDataManager() { return dataManager; }
     public CardDataManager getCardDataManager() { return cardDataManager; }
     public CardDataCache getCardDataCache() { return cardDataCache; }
-    public SchedulerAdapter getSchedulerAdapter() { return scheduler; }
-
-    public void enqueueMain(Runnable runnable) {
-        if (runnable != null) mainQueue.add(runnable);
-        else getLogger().warning("⚠ Đang cố enqueue một Runnable null!");
-    }
-
-    public static void runOnMainThread(Runnable runnable) {
-        if (instance == null) return;
-        try {
-            SchedulerAdapter s = instance.getSchedulerAdapter();
-            if (s != null) {
-                s.runTask(instance, runnable);
-                return;
-            }
-        } catch (Throwable ignored) {}
-        Bukkit.getScheduler().runTask(instance, runnable);
-    }
+    public FoliaLib getFoliaLib() { return foliaLib; }
 
     public FileConfiguration getMenusConfig() {
         if (menusConfig == null) loadMenusConfig();
@@ -155,7 +130,9 @@ public class NapThePlugin extends JavaPlugin {
         }
     }
 
-    public String getDetectedServerType() { return detectedServerType; }
+    public String getDetectedServerType() {
+        return foliaLib.isFolia() ? "Folia" : foliaLib.isPaper() ? "Paper" : "Spigot";
+    }
 
     public void reloadPlugin() {
         getLogger().info("🔄 Bắt đầu reload Card2K...");
@@ -170,13 +147,13 @@ public class NapThePlugin extends JavaPlugin {
             dataManager.reload();
             cardDataManager = new CardDataManager(this);
 
-            if (scheduler != null) {
-                scheduler.cancelAll();
+            if (foliaLib != null) {
+                foliaLib.getScheduler().cancelAllTasks();
                 long placeholderTick = getConfig().getLong("placeholder_update", 300L);
-                scheduler.startRepeatingTask(() -> {
+                foliaLib.getScheduler().runTimer(() -> {
                     try { cardDataCache.reload(); }
                     catch (Exception ex) { getLogger().warning("Lỗi khi reload card cache: " + ex.getMessage()); }
-                }, placeholderTick);
+                }, placeholderTick, placeholderTick);
             }
 
             getLogger().info("✅ Reload Card2K thành công!");
@@ -186,31 +163,5 @@ public class NapThePlugin extends JavaPlugin {
         }
     }
 
-    private SchedulerAdapter detectScheduler() {
-        getLogger().info("⚙ Bắt đầu nhận diện loại server (Paper/Spigot)...");
-        try {
-            Class.forName("com.destroystokyo.paper.PaperConfig");
-            detectedServerType = "Paper";
-            getLogger().info("✔ Paper detected");
-            return new PaperSchedulerAdapter(this);
-        } catch (Throwable ignored) {}
-        detectedServerType = "Spigot";
-        getLogger().info("✔ Spigot detected");
-        return new SpigotSchedulerAdapter(this);
-    }
 
-    private void runMainQueue() {
-        Runnable r;
-        while ((r = mainQueue.poll()) != null) {
-            if (r != null) {
-                try { r.run(); }
-                catch (Exception ex) {
-                    getLogger().warning("❌ Lỗi khi chạy task từ mainQueue: " + ex.getMessage());
-                    ex.printStackTrace();
-                }
-            } else {
-                getLogger().warning("⚠ mainQueue chứa Runnable null!");
-            }
-        }
-    }
 }
